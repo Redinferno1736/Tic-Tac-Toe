@@ -24,42 +24,40 @@ def undo_move(board, move):
     board[row][col] = " "
 
 def minimax(board, is_maximizing):
-    b=copy.deepcopy(board)
-    result = check_res(b)
-    if result is not None:  # Check if the game has ended
-        if result == "O":
-            return 10, None
-        elif result == "X":
-            return -10, None
-        else:
-            return 0, None
+    result = check_res(board)
+    if result == "O":  # Computer wins
+        return 10, None
+    if result == "X":  # Player wins
+        return -10, None
+    if result == "D":  # Draw
+        return 0, None
 
+    best_move = None
     if is_maximizing:
         best_score = -float('inf')
-        best_move = None
-        empty_cells = [(i, j) for i in range(3) for j in range(3) if board[i][j] == " "]
-        for move in empty_cells:
-            make_move(board, move, "O")  # Simulate computer's move
-            score, _ = minimax(board,False)  # Recurse for minimizer
-            undo_move(board, move)  # Undo the move
-            if score > best_score:
-                best_score = score
-                best_move = move
-        return best_score, best_move
-
+        for i in range(3):
+            for j in range(3):
+                if board[i][j] == " ":
+                    board[i][j] = "O"
+                    score, _ = minimax(board, False)
+                    board[i][j] = " "
+                    if score > best_score:
+                        best_score = score
+                        best_move = (j, i)
     else:
         best_score = float('inf')
-        best_move = None
-        empty_cells = [(i, j) for i in range(3) for j in range(3) if board[i][j] == " "]
-        for move in empty_cells:
-            make_move(board, move, "X")  # Simulate human's move
-            score, _ = minimax(board,True)  # Recurse for maximizer
-            undo_move(board, move)  # Undo the move
-            if score < best_score:
-                best_score = score
-                best_move = move
-        return best_score, best_move
-    
+        for i in range(3):
+            for j in range(3):
+                if board[i][j] == " ":
+                    board[i][j] = "X"
+                    score, _ = minimax(board, True)
+                    board[i][j] = " "
+                    if score < best_score:
+                        best_score = score
+                        best_move = (j, i)
+
+    return best_score, best_move
+
 def easy(board):
     empty_cells = [(j, i) for i in range(3) for j in range(3) if board[i][j] == " "]
     return random.choice(empty_cells)
@@ -111,54 +109,51 @@ def level():
 
 
 def vs_computer(dificulty):
-    a=set()
-    board=[[" " for _ in range(3)] for _ in range(3)]
-    screen=pygame.display.set_mode((1080, 720))
+    board = [[" " for _ in range(3)] for _ in range(3)]
+    screen = pygame.display.set_mode((1080, 720))
     screen.fill("black")
 
     for i in range(3):
         for j in range(3):
-            pygame.draw.rect(screen, "white", (250+i*200, 120+j*200, 200, 200), 4)
+            pygame.draw.rect(screen, "white", (250 + i*200, 120 + j*200, 200, 200), 4)
 
     pygame.display.flip()
 
-    flag=True
-    running=True
+    flag = True
+    running = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
-            if flag == True:
+            if flag:  # Player's turn
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    flag=True
                     mouse_pos = event.pos
-                    x, y = mouse_pos
-                    x, y = (x - 250) // 200, (y - 120) // 200
-                    a.add((x, y))
-
-                    if board[y][x]==" ":
-                        board[y][x]="X"
+                    x, y = (mouse_pos[0] - 250) // 200, (mouse_pos[1] - 120) // 200
+                    if 0 <= x < 3 and 0 <= y < 3 and board[y][x] == " ":
+                        board[y][x] = "X"
                         pygame.draw.line(screen, "red", (250 + x*200 + 20, 120 + y*200 + 20), (250 + (x+1)*200 - 20, 120 + (y+1)*200 - 20), 4)
                         pygame.draw.line(screen, "red", (250 + (x+1)*200 - 20, 120 + y*200 + 20), (250 + x*200 + 20, 120 + (y+1)*200 - 20), 4)
                         pygame.display.flip()
+                        flag = False
+                        result = check_res(board)
+                        if result:
+                            functions.result(result)
+                            running = False
 
-                        flag=False
-                        running=functions.check_result(board)
-
-            if flag == False:
-                c=copy.deepcopy(board)
-                if dificulty=="easy":
-                    x,y=easy(c)
+            if not flag:  # AI's turn
+                pygame.time.delay(500)  # Delay for AI "thinking"
+                if dificulty == "easy":
+                    x, y = easy(board)
                 else:
-                    x,y=hard(c)
-                a.add((x, y))
-                pygame.time.delay(500)
-                if board[y][x]==" " or (x, y) not in a:
-                    board[y][x]="O"
-                    
+                    x, y = hard(board)
+
+                if board[y][x] == " ":
+                    board[y][x] = "O"
                     pygame.draw.circle(screen, "green", (250 + x*200 + 100, 120 + y*200 + 100), 80, 4)
                     pygame.display.flip()
-
-                    flag=True
-                    running=functions.check_result(board)
+                    flag = True
+                    result = check_res(board)
+                    if result:
+                        functions.result(result)
+                        running = False
